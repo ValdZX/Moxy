@@ -11,6 +11,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import moxy.MvpAppCompatFragment
 import moxy.ktx.moxyPresenter
 import moxy.sample.R
+import moxy.sample.dailypicture.bl.view.DailyPictureView
+import moxy.sample.dailypicture.bl.DailyPicturePresenter
 import moxy.sample.databinding.FragmentDailyPictureBinding
 import moxy.sample.ui.ProgressRequestListener
 import moxy.sample.ui.ViewBindingHolder

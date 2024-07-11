@@ -1,7 +1,6 @@
-package moxy.sample.dailypicture.ui
+package moxy.sample.dailypicture.bl.view
 
 import moxy.MvpView
-import moxy.sample.dailypicture.domain.PictureOfTheDay
 import moxy.viewstate.strategy.AddToEndSingleTagStrategy
 import moxy.viewstate.strategy.StateStrategyType
 import moxy.viewstate.strategy.alias.AddToEndSingle

@@ -13,19 +13,13 @@ import javax.lang.model.element.Element
 import javax.lang.model.element.TypeElement
 import javax.lang.model.type.DeclaredType
 import javax.lang.model.type.TypeMirror
-import kotlin.contracts.ExperimentalContracts
-import kotlin.contracts.contract
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
 /**
  * TypeMirror must be of kind TypeKind.DECLARED
  */
-@UseExperimental(ExperimentalContracts::class)
 fun TypeMirror.asTypeElement(): TypeElement {
-    contract {
-        returns() implies (this@asTypeElement is DeclaredType)
-    }
     return (this as DeclaredType).asElement() as TypeElement
 }
 
@@ -42,7 +36,8 @@ fun KClass<*>.subtypeWildcard(): WildcardTypeName = WildcardTypeName.subtypeOf(j
 fun KClass<*>.supertypeWildcard(): WildcardTypeName = WildcardTypeName.supertypeOf(java)
 fun ClassName.supertypeWildcard(): WildcardTypeName = WildcardTypeName.supertypeOf(this)
 
-fun TypeSpec.toJavaFile(className: ClassName): JavaFile = toJavaFile(className.packageName())
+fun TypeSpec.toJavaFile(className: ClassName): JavaFile =
+    toJavaFile(className.packageName())
 fun TypeSpec.toJavaFile(packageName: String): JavaFile {
     return JavaFile.builder(packageName, this)
         .indent("\t")

@@ -1,7 +1,8 @@
 package moxy.sample.ui
 
+import coil.request.ErrorResult
 import coil.request.ImageRequest
-import coil.request.ImageResult
+import coil.request.SuccessResult
 
 class ProgressRequestListener(
     private val showProgress: (isProgress: Boolean) -> Unit
@@ -11,7 +12,7 @@ class ProgressRequestListener(
         showProgress.invoke(true)
     }
 
-    override fun onSuccess(request: ImageRequest, metadata: ImageResult.Metadata) {
+    override fun onSuccess(request: ImageRequest, result: SuccessResult) {
         showProgress.invoke(false)
     }
 
@@ -19,7 +20,7 @@ class ProgressRequestListener(
         showProgress.invoke(false)
     }
 
-    override fun onError(request: ImageRequest, throwable: Throwable) {
+    override fun onError(request: ImageRequest, result: ErrorResult) {
         showProgress.invoke(false)
     }
 }

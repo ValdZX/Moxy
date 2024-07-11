@@ -14,6 +14,7 @@ import moxy.compiler.getFullClassName
 import javax.lang.model.element.Modifier
 import javax.lang.model.element.TypeElement
 import javax.lang.model.element.TypeParameterElement
+import javax.lang.model.type.DeclaredType
 import javax.lang.model.type.MirroredTypeException
 import javax.lang.model.type.TypeKind
 import javax.lang.model.type.TypeMirror
@@ -109,7 +110,9 @@ class InjectViewStateProcessor : ElementProcessor<TypeElement, PresenterInfo?> {
         while (superclass.kind != TypeKind.NONE) {
             val superclassElement: TypeElement = superclass.asTypeElement()
 
-            val typeArguments: List<TypeMirror> = superclass.typeArguments
+            val typeArguments: List<TypeMirror> = if (superclass is DeclaredType) {
+                superclass.typeArguments
+            } else emptyList()
             val typeParameters: List<TypeParameterElement?> = superclassElement.typeParameters
 
             require(typeArguments.size <= typeParameters.size) {

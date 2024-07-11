@@ -1,10 +1,11 @@
-package moxy.sample.dailypicture.ui
+package moxy.sample.dailypicture.bl
 
 import kotlinx.coroutines.launch
 import moxy.MvpPresenter
 import moxy.presenterScope
 import moxy.sample.dailypicture.domain.DailyPictureInteractor
 import moxy.sample.dailypicture.domain.PictureOfTheDay
+import moxy.sample.dailypicture.bl.view.DailyPictureView
 import moxy.sample.util.Logger
 import java.time.LocalDate
 import javax.inject.Inject

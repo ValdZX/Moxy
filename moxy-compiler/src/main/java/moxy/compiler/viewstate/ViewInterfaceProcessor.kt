@@ -23,6 +23,7 @@ import javax.lang.model.element.ElementKind
 import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.Modifier
 import javax.lang.model.element.TypeElement
+import javax.lang.model.type.DeclaredType
 import javax.lang.model.type.TypeKind
 import javax.lang.model.type.TypeMirror
 import javax.tools.Diagnostic.Kind
@@ -115,7 +116,12 @@ class ViewInterfaceProcessor(
         }
 
         val strategy: StrategyWithTag? = getStateStrategy(methodElement)
-            ?: viewInterfaceStrategyType?.let { type -> StrategyWithTag(type, methodElement.defaultTag()) }
+            ?: viewInterfaceStrategyType?.let { type ->
+                StrategyWithTag(
+                    type,
+                    methodElement.defaultTag()
+                )
+            }
 
         return ViewInterfaceMethod(
             viewInterfaceElement.asDeclaredType(),
@@ -128,7 +134,8 @@ class ViewInterfaceProcessor(
     private fun getStateStrategy(methodElement: ExecutableElement): StrategyWithTag? {
         val annotation = getStateStrategyAnnotation(methodElement) ?: return null
 
-        val strategyClassFromAnnotation = annotation.getValueAsTypeMirror(StateStrategyType::value) ?: return null
+        val strategyClassFromAnnotation =
+            annotation.getValueAsTypeMirror(StateStrategyType::value) ?: return null
         val strategyType = strategyClassFromAnnotation.asTypeElement()
         val tag = annotation.getValueAsString(StateStrategyType::tag) ?: methodElement.defaultTag()
 
@@ -154,7 +161,9 @@ class ViewInterfaceProcessor(
     private fun getTypeAndValidateGenerics(interfaceMirror: TypeMirror): TypeElement {
         val superinterface = interfaceMirror.asTypeElement()
 
-        val typeArguments = interfaceMirror.typeArguments
+        val typeArguments = if (interfaceMirror is DeclaredType) {
+            interfaceMirror.typeArguments
+        } else emptyList()
         val typeParameters = superinterface.typeParameters
 
         require(typeArguments.size <= typeParameters.size) {
@@ -192,7 +201,10 @@ class ViewInterfaceProcessor(
         return resultSet
     }
 
-    private fun reportSuperinterfaceMethodsClash(methodA: ViewInterfaceMethod, methodB: ViewInterfaceMethod) {
+    private fun reportSuperinterfaceMethodsClash(
+        methodA: ViewInterfaceMethod,
+        methodB: ViewInterfaceMethod
+    ) {
         if (methodA.strategy != methodB.strategy
             && methodA.strategy != null
             && methodB.strategy != null
@@ -200,9 +212,9 @@ class ViewInterfaceProcessor(
             messager.printMessage(
                 Kind.ERROR,
                 "Strategy clash in superinterfaces of $viewInterfaceElement. " +
-                        "Interface ${methodB.enclosingInterfaceElement.toString()} defines ${methodB.signature} " +
+                        "Interface ${methodB.enclosingInterfaceElement} defines ${methodB.signature} " +
                         "with strategy ${methodB.strategy.strategyClass.simpleName}, " +
-                        "but ${methodA.enclosingInterfaceElement.toString()} defines this method " +
+                        "but ${methodA.enclosingInterfaceElement} defines this method " +
                         "with strategy ${methodA.strategy.strategyClass.simpleName}. " +
                         "Override this method in $viewInterfaceElement to choose appropriate strategy",
                 viewInterfaceElement
@@ -249,7 +261,12 @@ class ViewInterfaceProcessor(
         return methods.map { method ->
             if (method.strategy == null) {
                 reportEmptyStrategy(method.methodElement)
-                method.toViewMethod(StrategyWithTag(frameworkDefaultStrategy, method.methodElement.defaultTag()))
+                method.toViewMethod(
+                    StrategyWithTag(
+                        frameworkDefaultStrategy,
+                        method.methodElement.defaultTag()
+                    )
+                )
             } else {
                 method.toViewMethod()
             }
@@ -272,7 +289,9 @@ class ViewInterfaceProcessor(
     private fun getStateStrategyAnnotation(element: Element): AnnotationMirror? {
         val enclosed = listOfNotNull(element.getAnnotationMirror(StateStrategyType::class))
         val aliased = element.annotationMirrors
-            .mapNotNull { it.annotationType.asTypeElement().getAnnotationMirror(StateStrategyType::class) }
+            .mapNotNull {
+                it.annotationType.asTypeElement().getAnnotationMirror(StateStrategyType::class)
+            }
 
         val strategies = enclosed + aliased
 
@@ -280,9 +299,11 @@ class ViewInterfaceProcessor(
             if (element is ExecutableElement) {
                 messager.printMessage(
                     Kind.ERROR, "There's more than one state strategy type defined for method " +
-                            "'${element.simpleName}(${element.parameters.joinToString {
-                                it.asType().toString()
-                            }})'" +
+                            "'${element.simpleName}(${
+                                element.parameters.joinToString {
+                                    it.asType().toString()
+                                }
+                            })'" +
                             " in interface '${element.enclosingElement.asType()}'", element
                 )
             } else if (element is TypeElement) {

@@ -4,22 +4,14 @@ plugins {
 }
 
 android {
-    compileSdkVersion(29)
+    compileSdk = 34
 
     defaultConfig {
-        minSdkVersion(14)
-        targetSdkVersion(29)
+        minSdk = 14
 
-        consumerProguardFiles("/moxy/src/main/resources/META-INF/proguard/moxy.pro")
-    }
-
-    buildFeatures {
-        buildConfig = false
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        proguardFiles(
+            file("/moxy/src/main/resources/META-INF/proguard/moxy.pro")
+        )
     }
 }
 

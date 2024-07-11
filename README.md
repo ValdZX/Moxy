@@ -103,25 +103,6 @@ dependencies {
     kapt "com.github.moxy-community:moxy-compiler:$moxyVersion"
 }
 ```
-
-#### Java 8
-
-Moxy uses [Java 8 features](https://developer.android.com/studio/write/java8-support), so you also need to specify source and target compatibility for each Module that uses Moxy:
-
-```groovy
-android {
-    ...
-    // For Java projects
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-    // For Kotlin projects
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-}
-```
 ### Default Android module
 For additional base view classes `MvpActivity` and `MvpFragment` add this:
 ```groovy

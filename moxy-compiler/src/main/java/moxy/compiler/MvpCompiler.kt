@@ -150,7 +150,7 @@ class MvpCompiler : AbstractProcessor() {
         )
 
         for (usedView in injectViewStateProcessor.usedViews) {
-            generateCode(
+             generateCode(
                 usedView,
                 ElementKind.INTERFACE,
                 viewInterfaceProcessor,
