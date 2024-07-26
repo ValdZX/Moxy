@@ -62,7 +62,7 @@ fun CodeGenerator.generateViewState(
         .addTypeVariables(typeVariables)
     val strategyToImport = mutableSetOf<ClassName>()
     val funks = ksClassDeclaration.getAllFunctions()
-        .filter { !it.isConstructor() && it.isAbstract }
+        .filter { !it.isConstructor() && it.returnType?.resolve()?.toClassName() == Unit::class.asClassName() }
         .map { ViewStateFun(it) }.toList()
     addUniqueSuffixToMethodsWithTheSameName(funks)
     funks.forEach { funk ->

@@ -36,6 +36,7 @@ class ViewStateTest {
         val result = SourceFile.kotlin(
             "DailyPictureView.kt", """
         import moxy.MvpView
+        import moxy.MvpPresenter
         import moxy.viewstate.strategy.AddToEndSingleTagStrategy
         import moxy.viewstate.strategy.StateStrategyType
         import moxy.viewstate.strategy.alias.AddToEndSingle
@@ -73,6 +74,8 @@ class ViewStateTest {
             @OneExecution
             fun showError(message: String)
         }
+
+        class DailyPicturePresenter: MvpPresenter<DailyPictureView>()
     """
         ).compile()
         assertEquals(result.exitCode, KotlinCompilation.ExitCode.OK)
@@ -87,12 +90,12 @@ class ViewStateTest {
         import moxy.viewstate.strategy.AddToEndSingleStrategy
         import moxy.viewstate.strategy.StateStrategyType
         
-        interface GenericView<T> : MvpView {
+        interface GenericView<T: Number> : MvpView {
             @StateStrategyType(AddToEndSingleStrategy::class)
             fun testEvent(count: Int, param: T)
         }
         
-        interface StringView : GenericView<String>
+        interface IntView : GenericView<Int>
 
         abstract class AbstractPresenter<V : CommonView> : MvpPresenter<V>()
         
@@ -100,7 +103,10 @@ class ViewStateTest {
         open class StringPresenter<T, V: GenericView<T>> : AbstractPresenter<V>()
         
         @InjectViewState
-        class ExtStringPresenter : StringPresenter<Short, StringView>()
+        class ExtStringPresenter : StringPresenter<Short, IntView>()
+        
+        @InjectViewState
+        class Ext2StringPresenter : StringPresenter<Short, GenericView<Short>>()
     """
         ).compile()
         assertEquals(result.exitCode, KotlinCompilation.ExitCode.OK)

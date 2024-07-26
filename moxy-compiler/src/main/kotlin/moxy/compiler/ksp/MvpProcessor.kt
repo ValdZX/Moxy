@@ -11,6 +11,7 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeArgument
+import com.google.devtools.ksp.symbol.KSTypeParameter
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
 import moxy.MvpPresenter
@@ -68,12 +69,12 @@ private fun KSClassDeclaration.getViewStateClass(
     if (superType.toClassName() == MvpPresenter::class.asClassName()) {
         val firstArgument = superType.arguments.firstOrNull()
         var resolve = firstArgument?.type?.resolve() ?: return null
-        if (resolve !is KSClassDeclaration) {
+        if (resolve.declaration is KSTypeParameter) {
             val parameterName = firstArgument.type.toString()
             resolve = childrenPairs[parameterName]?.type?.resolve() ?: return null
         }
-        if (resolve !is KSClassDeclaration) return null
-        val viewName = (resolve as KSType).toClassName().simpleName
+        if (resolve.declaration is KSTypeParameter) return null
+        val viewName = resolve.toClassName().simpleName
         return "$viewName$VIEW_STATE_SUFFIX"
     } else if (superTypeDeclaration is KSClassDeclaration) {
         val pairs = superTypeDeclaration.typeParameters.zip(superType.arguments)
