@@ -92,7 +92,7 @@ class ViewStateTest {
         
         interface GenericView<T: Number> : MvpView {
             @StateStrategyType(AddToEndSingleStrategy::class)
-            fun testEvent(count: Int, param: T)
+            fun testEvent(count: Int, param: List<T>)
         }
         
         interface IntView : GenericView<Int>

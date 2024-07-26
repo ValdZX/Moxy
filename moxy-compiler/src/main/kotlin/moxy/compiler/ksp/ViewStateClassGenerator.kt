@@ -7,6 +7,7 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.KSTypeParameter
 import com.google.devtools.ksp.symbol.KSValueParameter
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
@@ -23,6 +24,7 @@ import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.addOriginatingKSFile
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
+import com.squareup.kotlinpoet.ksp.toTypeParameterResolver
 import com.squareup.kotlinpoet.ksp.toTypeVariableName
 import com.squareup.kotlinpoet.ksp.writeTo
 import moxy.MvpProcessor
@@ -41,11 +43,12 @@ fun CodeGenerator.generateViewState(
     logger: KSPLogger
 ): ClassName {
     val packageName = ksClassDeclaration.packageName.asString()
-    val typeVariables = ksClassDeclaration.typeParameters.map { it.toTypeVariableName() }
+    val typeVariables = ksClassDeclaration.typeParameters
+    val typeVariablesNames = ksClassDeclaration.typeParameters.map { it.toTypeVariableName() }
     val nameWithTypeVariables = if (typeVariables.isEmpty()) {
         ksClassDeclaration.toClassName()
     } else {
-        ksClassDeclaration.toClassName().parameterizedBy(typeVariables)
+        ksClassDeclaration.toClassName().parameterizedBy(typeVariablesNames)
     }
     val typeName = ksClassDeclaration.simpleName.getShortName() + MvpProcessor.VIEW_STATE_SUFFIX
     logger.info(
@@ -59,10 +62,13 @@ fun CodeGenerator.generateViewState(
         .addOriginatingKSFile(ksFile = ksClassDeclaration.containingFile!!)
         .superclass(MvpViewState::class.asClassName().parameterizedBy(nameWithTypeVariables))
         .addSuperinterface(nameWithTypeVariables)
-        .addTypeVariables(typeVariables)
+        .addTypeVariables(typeVariablesNames)
     val strategyToImport = mutableSetOf<ClassName>()
     val funks = ksClassDeclaration.getAllFunctions()
-        .filter { !it.isConstructor() && it.returnType?.resolve()?.toClassName() == Unit::class.asClassName() }
+        .filter {
+            !it.isConstructor() && it.returnType?.resolve()
+                ?.toClassName() == Unit::class.asClassName()
+        }
         .map { ViewStateFun(it) }.toList()
     addUniqueSuffixToMethodsWithTheSameName(funks)
     funks.forEach { funk ->
@@ -101,7 +107,7 @@ private fun FileSpec.Builder.addStrategyImports(strategyToImport: MutableSet<Cla
 private fun KSFunctionDeclaration.generateCommandClass(
     viewTypeName: TypeName,
     defaultStrategy: ClassName,
-    classTypeVariables: List<TypeVariableName>,
+    classTypeVariables: List<KSTypeParameter>,
     commandClassName: String,
     strategyToImport: MutableSet<ClassName>,
     logger: KSPLogger
@@ -163,14 +169,9 @@ private fun KSFunctionDeclaration.generateCommandConstructor(
         .build()
 }
 
-private fun List<KSValueParameter>.toPropertySpec(classTypeVariables: List<TypeVariableName>): List<PropertySpec> {
-    val typeVars = classTypeVariables.map { it.name }
+private fun List<KSValueParameter>.toPropertySpec(classTypeVariables: List<KSTypeParameter>): List<PropertySpec> {
     return map {
-        val type = if (it.type.toString() in typeVars) {
-            TypeVariableName(it.type.toString())
-        } else {
-            it.type.toTypeName()
-        }
+        val type = it.type.toTypeName(classTypeVariables.toTypeParameterResolver())
         val name = it.name!!.getShortName()
         PropertySpec.builder(name, type)
             .initializer(name)
@@ -178,14 +179,9 @@ private fun List<KSValueParameter>.toPropertySpec(classTypeVariables: List<TypeV
     }
 }
 
-private fun List<KSValueParameter>.toParameterSpec(classTypeVariables: List<TypeVariableName>): List<ParameterSpec> {
-    val typeVars = classTypeVariables.map { it.name }
+private fun List<KSValueParameter>.toParameterSpec(classTypeVariables: List<KSTypeParameter>): List<ParameterSpec> {
     return map {
-        val type = if (it.type.toString() in typeVars) {
-            TypeVariableName(it.type.toString())
-        } else {
-            it.type.toTypeName()
-        }
+        val type = it.type.toTypeName(classTypeVariables.toTypeParameterResolver())
         ParameterSpec.builder(
             it.name!!.getShortName(),
             type
@@ -207,7 +203,7 @@ private fun addUniqueSuffixToMethodsWithTheSameName(funks: List<ViewStateFun>) {
 }
 
 private fun KSFunctionDeclaration.generateFun(
-    classTypeVariables: List<TypeVariableName>,
+    classTypeVariables: List<KSTypeParameter>,
     commandClassName: String,
     uniqueSuffix: String,
     logger: KSPLogger,
@@ -242,7 +238,7 @@ private fun KSFunctionDeclaration.generateFun(
 
 fun overriding(
     function: KSFunctionDeclaration,
-    classTypeVariables: List<TypeVariableName>
+    classTypeVariables: List<KSTypeParameter>
 ): FunSpec.Builder {
     val methodName = function.simpleName.getShortName()
     val funBuilder = FunSpec.builder(methodName)
