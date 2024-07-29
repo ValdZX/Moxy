@@ -4,6 +4,7 @@ import com.google.devtools.ksp.isConstructor
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
@@ -19,7 +20,6 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.addOriginatingKSFile
 import com.squareup.kotlinpoet.ksp.toClassName
@@ -55,9 +55,7 @@ fun CodeGenerator.generateViewState(
         "Generate state: ${ksClassDeclaration.packageName.getShortName()}.$typeName",
         ksClassDeclaration
     )
-    val defaultStrategy = ksClassDeclaration.annotations.find {
-        it.annotationType.element.toString() == StateStrategyType::class.java.name
-    }?.annotationType?.resolve()?.toClassName() ?: AddToEndSingleStrategy::class.asClassName()
+    val (defaultStrategy, _) = ksClassDeclaration.annotations.getStrategy(AddToEndSingleStrategy::class.asClassName())
     val classBuilder = TypeSpec.classBuilder(typeName)
         .addOriginatingKSFile(ksFile = ksClassDeclaration.containingFile!!)
         .superclass(MvpViewState::class.asClassName().parameterizedBy(nameWithTypeVariables))
@@ -145,28 +143,31 @@ private fun KSFunctionDeclaration.generateCommandConstructor(
     defaultStrategy: ClassName,
     strategyToImport: MutableSet<ClassName>
 ): CodeBlock {
-    val findAnnotation = annotations
-        .find {
-            it.annotationType.resolve().toTypeName()
-                .toString() == StateStrategyType::class.java.name
-        }
-        ?: annotations.flatMap {
-            annotations.first().annotationType.resolve().declaration.annotations
-        }.find {
-            it.annotationType.resolve().toTypeName()
-                .toString() == StateStrategyType::class.java.name
-        }
-    val (strategy, tag) = findAnnotation
-        ?.let {
-            val value = (it.arguments[0].value as KSType).toClassName()
-            val tag = it.arguments[1].value
-            value to tag.toString().ifEmpty { simpleName.getShortName() }
-        }
-        ?: (defaultStrategy to simpleName.getShortName())
+    val (strategy, tag) = annotations.getStrategy(defaultStrategy, simpleName.getShortName())
     strategyToImport.add(strategy)
     return CodeBlock.Builder()
         .addStatement("\"$tag\", $strategy::class.java")
         .build()
+}
+
+private fun Sequence<KSAnnotation>.getStrategy(defaultStrategy: ClassName, defaultTag: String = ""): Pair<ClassName, String> {
+    val findAnnotation = find {
+            it.annotationType.resolve().toTypeName()
+                .toString() == StateStrategyType::class.java.name
+        }
+        ?: flatMap {
+            first().annotationType.resolve().declaration.annotations
+        }.find {
+            it.annotationType.resolve().toTypeName()
+                .toString() == StateStrategyType::class.java.name
+        }
+    return findAnnotation
+        ?.let {
+            val value = (it.arguments[0].value as KSType).toClassName()
+            val tag = it.arguments[1].value
+            value to tag.toString().ifEmpty { defaultTag }
+        }
+        ?: (defaultStrategy to defaultTag)
 }
 
 private fun List<KSValueParameter>.toPropertySpec(classTypeVariables: List<KSTypeParameter>): List<PropertySpec> {

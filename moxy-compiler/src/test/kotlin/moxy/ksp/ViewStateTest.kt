@@ -30,6 +30,28 @@ class ViewStateTest {
         assertEquals(result.exitCode, KotlinCompilation.ExitCode.OK)
     }
 
+    @Test
+    fun `Compile RootStrategy test`() {
+        val result = SourceFile.kotlin(
+            "RootStrategy.kt", """
+        import moxy.InjectViewState
+        import moxy.MvpPresenter
+        import moxy.MvpView
+        import moxy.viewstate.strategy.SkipStrategy
+        import moxy.viewstate.strategy.AddToEndSingleStrategy
+        import moxy.viewstate.strategy.StateStrategyType
+        
+        @StateStrategyType(SkipStrategy::class)
+        interface RootStrategy : MvpView {
+            @StateStrategyType(AddToEndSingleStrategy::class)
+            fun addToEndFun()
+            
+            fun rootStrategyFun()
+        }
+    """
+        ).compile()
+        assertEquals(result.exitCode, KotlinCompilation.ExitCode.OK)
+    }
 
     @Test
     fun `Compile Sample test`() {
