@@ -119,10 +119,18 @@ class ViewStateTest {
         
         interface IntView : GenericView<Int>
 
+        interface SomeHandler {
+            fun select(data: Int)
+        }
+
         abstract class AbstractPresenter<V : CommonView> : MvpPresenter<V>()
         
         @InjectViewState
-        open class StringPresenter<T, V: GenericView<T>> : AbstractPresenter<V>()
+        open class StringPresenter<T, V: GenericView<T>> : AbstractPresenter<V>, SomeHandler {
+            override fun select(data: Int) {
+                println(data)
+            }
+        }
         
         @InjectViewState
         class ExtStringPresenter : StringPresenter<Short, IntView>()

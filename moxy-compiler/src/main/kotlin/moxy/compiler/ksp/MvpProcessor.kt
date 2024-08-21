@@ -7,6 +7,7 @@ import com.google.devtools.ksp.isAbstract
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
+import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
@@ -64,7 +65,10 @@ private fun KSClassDeclaration.getViewStateClass(
     superTypes: List<KSType> = getAllSuperTypes().toList(),
     childrenPairs: Map<String, KSTypeArgument?> = emptyMap()
 ): String? {
-    val superType = superTypes.firstOrNull() ?: return null
+    val superType = superTypes.find {
+        val declaration = it.declaration
+        declaration is KSClassDeclaration && declaration.classKind == ClassKind.CLASS
+    }?: return null
     val superTypeDeclaration = superType.declaration
     if (superType.toClassName() == MvpPresenter::class.asClassName()) {
         val firstArgument = superType.arguments.firstOrNull()
