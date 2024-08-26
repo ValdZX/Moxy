@@ -88,12 +88,14 @@ fun CodeGenerator.generateViewState(
         classBuilder.addFunction(commandFun)
     }
 
-    FileSpec
-        .builder(packageName, typeName)
-        .addStrategyImports(strategyToImport)
-        .addType(classBuilder.build())
-        .build()
-        .writeTo(this, Dependencies(true))
+    runCatching {
+        FileSpec
+            .builder(packageName, typeName)
+            .addStrategyImports(strategyToImport)
+            .addType(classBuilder.build())
+            .build()
+            .writeTo(this, Dependencies(true))
+    }
     return ClassName(packageName, typeName)
 }
 

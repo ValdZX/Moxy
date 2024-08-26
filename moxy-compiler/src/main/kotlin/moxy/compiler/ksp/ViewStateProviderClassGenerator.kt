@@ -37,11 +37,13 @@ fun CodeGenerator.generateViewStateProvider(
         .addFunction(viewState.generateGetViewStateMethod())
         .build()
     val packageName = ksClassDeclaration.packageName.asString()
-    FileSpec
-        .builder(packageName, className)
-        .addType(typeSpec)
-        .build()
-        .writeTo(this, Dependencies(true))
+    runCatching {
+        FileSpec
+            .builder(packageName, className)
+            .addType(typeSpec)
+            .build()
+            .writeTo(this, Dependencies(true))
+    }
 }
 
 private fun ClassName.generateGetViewStateMethod(): FunSpec {
