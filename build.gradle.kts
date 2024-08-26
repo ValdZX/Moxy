@@ -1,13 +1,13 @@
 plugins {
-    id("org.jetbrains.kotlin.jvm") version "2.0.0" apply false
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0" apply false
-    id("com.android.application") version "8.5.1" apply false
+    id("org.jetbrains.kotlin.jvm") version "2.0.20" apply false
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.20" apply false
+    id("com.android.application") version "8.5.2" apply false
     id("com.google.dagger.hilt.android") version "2.51.1" apply false
     id("com.github.ben-manes.versions") version "0.51.0"
     id("org.jetbrains.dokka") version "1.9.20"
     id("com.vanniktech.maven.publish") version "0.29.0" apply false
-    id("org.jetbrains.kotlin.android") version "2.0.0" apply false
-    id("com.google.devtools.ksp") version "2.0.0-1.0.23" apply false
+    id("org.jetbrains.kotlin.android") version "2.0.20" apply false
+    id("com.google.devtools.ksp") version "2.0.20-1.0.24" apply false
 }
 
 subprojects {

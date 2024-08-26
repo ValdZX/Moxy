@@ -1,7 +1,5 @@
 package moxy.compiler.ksp
 
-import com.google.devtools.ksp.processing.CodeGenerator
-import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.squareup.kotlinpoet.ClassName
@@ -13,17 +11,16 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.WildcardTypeName
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.addOriginatingKSFile
-import com.squareup.kotlinpoet.ksp.writeTo
 import moxy.MvpProcessor
 import moxy.MvpView
 import moxy.ViewStateProvider
 import moxy.viewstate.MvpViewState
 
-fun CodeGenerator.generateViewStateProvider(
+fun generateViewStateProvider(
     ksClassDeclaration: KSClassDeclaration,
     viewState: ClassName,
     logger: KSPLogger
-) {
+): FileSpec {
     val className =
         ksClassDeclaration.simpleName.getShortName() + MvpProcessor.VIEW_STATE_PROVIDER_SUFFIX
     logger.info(
@@ -37,13 +34,10 @@ fun CodeGenerator.generateViewStateProvider(
         .addFunction(viewState.generateGetViewStateMethod())
         .build()
     val packageName = ksClassDeclaration.packageName.asString()
-    runCatching {
-        FileSpec
-            .builder(packageName, className)
-            .addType(typeSpec)
-            .build()
-            .writeTo(this, Dependencies(true))
-    }
+    return FileSpec
+        .builder(packageName, className)
+        .addType(typeSpec)
+        .build()
 }
 
 private fun ClassName.generateGetViewStateMethod(): FunSpec {

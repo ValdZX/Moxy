@@ -4,6 +4,7 @@ import com.google.devtools.ksp.getAllSuperTypes
 import com.google.devtools.ksp.getClassDeclarationByName
 import com.google.devtools.ksp.getConstructors
 import com.google.devtools.ksp.isAbstract
+import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
@@ -13,8 +14,10 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeArgument
 import com.google.devtools.ksp.symbol.KSTypeParameter
+import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
+import com.squareup.kotlinpoet.ksp.writeTo
 import moxy.MvpPresenter
 import moxy.MvpProcessor.VIEW_STATE_SUFFIX
 import moxy.MvpView
@@ -23,6 +26,7 @@ class MvpProcessor(environment: SymbolProcessorEnvironment) : SymbolProcessor {
 
     private val codeGenerator = environment.codeGenerator
     private val logger = environment.logger
+    private val filesToGenerate = mutableMapOf<String, FileSpec>()
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val mvpView = resolver.getClassDeclarationByName(MvpView::class.qualifiedName!!)!!
@@ -40,8 +44,11 @@ class MvpProcessor(environment: SymbolProcessorEnvironment) : SymbolProcessor {
             }
             .toSet()
             .map {
-                codeGenerator.generateViewState(it, logger)
+                val (classname, fileSpec) = generateViewState(it, logger)
+                filesToGenerate[fileSpec.packageName + fileSpec.name] = fileSpec
+                classname
             }
+
         allClasses
             .filter { mvpPresenter.isAssignableFrom(it.asStarProjectedType()) && !it.isAbstract() }
             .toSet()
@@ -49,10 +56,19 @@ class MvpProcessor(environment: SymbolProcessorEnvironment) : SymbolProcessor {
                 it.getViewStateClass()?.let { viewName ->
                     val viewState = viewStates.find { it.simpleName == viewName }
                         ?: error("ViewState not found for ${it.qualifiedName?.getQualifier()}")
-                    codeGenerator.generateViewStateProvider(it, viewState, logger)
+                    val fileSpec = generateViewStateProvider(it, viewState, logger)
+                    filesToGenerate[fileSpec.packageName + fileSpec.name] = fileSpec
                 }
             }
         return emptyList()
+    }
+
+    override fun finish() {
+        filesToGenerate.values.forEach { fileSpec ->
+            runCatching {
+                fileSpec.writeTo(codeGenerator, Dependencies(false))
+            }
+        }
     }
 }
 
@@ -63,7 +79,7 @@ private fun KSClassDeclaration.getViewStateClass(
     val superType = superTypes.find {
         val declaration = it.declaration
         declaration is KSClassDeclaration && declaration.classKind == ClassKind.CLASS
-    }?: return null
+    } ?: return null
     val superTypeDeclaration = superType.declaration
     if (superType.toClassName() == MvpPresenter::class.asClassName()) {
         val firstArgument = superType.arguments.firstOrNull()

@@ -1,8 +1,6 @@
 package moxy.compiler.ksp
 
 import com.google.devtools.ksp.isConstructor
-import com.google.devtools.ksp.processing.CodeGenerator
-import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
@@ -26,7 +24,6 @@ import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.toTypeParameterResolver
 import com.squareup.kotlinpoet.ksp.toTypeVariableName
-import com.squareup.kotlinpoet.ksp.writeTo
 import moxy.MvpProcessor
 import moxy.viewstate.MvpViewState
 import moxy.viewstate.ViewCommand
@@ -38,10 +35,10 @@ data class ViewStateFun(
     var uniqueSuffix: String = ""
 )
 
-fun CodeGenerator.generateViewState(
+fun generateViewState(
     ksClassDeclaration: KSClassDeclaration,
     logger: KSPLogger
-): ClassName {
+): Pair<ClassName, FileSpec> {
     val packageName = ksClassDeclaration.packageName.asString()
     val typeVariables = ksClassDeclaration.typeParameters
     val typeVariablesNames = ksClassDeclaration.typeParameters.map { it.toTypeVariableName() }
@@ -87,16 +84,11 @@ fun CodeGenerator.generateViewState(
             declaration.generateFun(typeVariables, commandClassName, uniqueSuffix, logger)
         classBuilder.addFunction(commandFun)
     }
-
-    runCatching {
-        FileSpec
-            .builder(packageName, typeName)
-            .addStrategyImports(strategyToImport)
-            .addType(classBuilder.build())
-            .build()
-            .writeTo(this, Dependencies(true))
-    }
-    return ClassName(packageName, typeName)
+    return ClassName(packageName, typeName) to FileSpec
+        .builder(packageName, typeName)
+        .addStrategyImports(strategyToImport)
+        .addType(classBuilder.build())
+        .build()
 }
 
 private fun FileSpec.Builder.addStrategyImports(strategyToImport: MutableSet<ClassName>): FileSpec.Builder {
@@ -152,11 +144,14 @@ private fun KSFunctionDeclaration.generateCommandConstructor(
         .build()
 }
 
-private fun Sequence<KSAnnotation>.getStrategy(defaultStrategy: ClassName, defaultTag: String = ""): Pair<ClassName, String> {
+private fun Sequence<KSAnnotation>.getStrategy(
+    defaultStrategy: ClassName,
+    defaultTag: String = ""
+): Pair<ClassName, String> {
     val findAnnotation = find {
-            it.annotationType.resolve().toTypeName()
-                .toString() == StateStrategyType::class.java.name
-        }
+        it.annotationType.resolve().toTypeName()
+            .toString() == StateStrategyType::class.java.name
+    }
         ?: flatMap {
             first().annotationType.resolve().declaration.annotations
         }.find {

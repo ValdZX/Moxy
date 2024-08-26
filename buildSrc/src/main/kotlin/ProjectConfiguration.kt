@@ -1,4 +1,4 @@
-const val kotlinVersion = "2.0.0"
+const val kotlinVersion = "2.0.20"
 
 object Versions {
     const val kotlin = kotlinVersion

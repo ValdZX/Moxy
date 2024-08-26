@@ -27,7 +27,7 @@ dependencies {
     testImplementation(Deps.compiletesting)
     testImplementation(Deps.asm)
     testImplementation(Deps.asmUtil)
-    implementation("com.google.devtools.ksp:symbol-processing-api:2.0.0-1.0.23")
+    implementation("com.google.devtools.ksp:symbol-processing-api:2.0.20-1.0.24")
 
     testImplementation(kotlin("test"))
     testImplementation(kotlin("test-common"))
