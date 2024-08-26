@@ -23,13 +23,8 @@ class MvpProcessor(environment: SymbolProcessorEnvironment) : SymbolProcessor {
 
     private val codeGenerator = environment.codeGenerator
     private val logger = environment.logger
-    private var isProcessed = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        if (isProcessed) {
-            return emptyList()
-        }
-        isProcessed = true
         val mvpView = resolver.getClassDeclarationByName(MvpView::class.qualifiedName!!)!!
             .asStarProjectedType()
         val mvpPresenter = resolver.getClassDeclarationByName(MvpPresenter::class.qualifiedName!!)!!
