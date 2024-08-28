@@ -1,13 +1,18 @@
 package moxy.compiler.ksp
 
 import com.google.devtools.ksp.isConstructor
+import com.google.devtools.ksp.processing.CodeGenerator
+import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSNode
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeParameter
 import com.google.devtools.ksp.symbol.KSValueParameter
+import com.google.devtools.ksp.visitor.KSDefaultVisitor
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
@@ -24,6 +29,7 @@ import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.toTypeParameterResolver
 import com.squareup.kotlinpoet.ksp.toTypeVariableName
+import com.squareup.kotlinpoet.ksp.writeTo
 import moxy.MvpProcessor
 import moxy.viewstate.MvpViewState
 import moxy.viewstate.ViewCommand
@@ -34,6 +40,24 @@ data class ViewStateFun(
     val declaration: KSFunctionDeclaration,
     var uniqueSuffix: String = ""
 )
+
+class ViewVisitor(private val logger: KSPLogger, private val codeGenerator: CodeGenerator) : KSDefaultVisitor<Unit, ClassName?>() {
+    override fun defaultHandler(node: KSNode, data: Unit): ClassName? {
+        return null
+    }
+
+    override fun visitDeclaration(declaration: KSDeclaration, data: Unit): ClassName? {
+        this.visitAnnotated(declaration, data)
+        this.visitModifierListOwner(declaration, data)
+        if(declaration is KSClassDeclaration) {
+            val (classname, fileSpec) = generateViewState(declaration, logger)
+            fileSpec.writeTo(codeGenerator, Dependencies.ALL_FILES)
+            return classname
+        } else {
+            return null
+        }
+    }
+}
 
 fun generateViewState(
     ksClassDeclaration: KSClassDeclaration,

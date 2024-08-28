@@ -4,7 +4,6 @@ import com.google.devtools.ksp.getAllSuperTypes
 import com.google.devtools.ksp.getClassDeclarationByName
 import com.google.devtools.ksp.getConstructors
 import com.google.devtools.ksp.isAbstract
-import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
@@ -14,10 +13,8 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeArgument
 import com.google.devtools.ksp.symbol.KSTypeParameter
-import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
-import com.squareup.kotlinpoet.ksp.writeTo
 import moxy.MvpPresenter
 import moxy.MvpProcessor.VIEW_STATE_SUFFIX
 import moxy.MvpView
@@ -26,29 +23,31 @@ class MvpProcessor(environment: SymbolProcessorEnvironment) : SymbolProcessor {
 
     private val codeGenerator = environment.codeGenerator
     private val logger = environment.logger
-    private val filesToGenerate = mutableMapOf<String, FileSpec>()
+    var invoked = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val mvpView = resolver.getClassDeclarationByName(MvpView::class.qualifiedName!!)!!
-            .asStarProjectedType()
-        val mvpPresenter = resolver.getClassDeclarationByName(MvpPresenter::class.qualifiedName!!)!!
-            .asStarProjectedType()
+        if (invoked) {
+            return emptyList()
+        }
         val allClasses = resolver.getAllFiles()
             .flatMap { it.declarations }
             .filterIsInstance<KSClassDeclaration>()
-
+        val viewVisitor = ViewVisitor(logger, codeGenerator)
+        val mvpView = resolver.getClassDeclarationByName(MvpView::class.qualifiedName!!)!!
+            .asStarProjectedType()
         val viewStates = allClasses
             .filter {
                 mvpView.isAssignableFrom(it.asStarProjectedType())
                         && it.getConstructors().toList().isEmpty()
             }
             .toSet()
-            .map {
-                val (classname, fileSpec) = generateViewState(it, logger)
-                filesToGenerate[fileSpec.packageName + fileSpec.name] = fileSpec
-                classname
+            .mapNotNull {
+                viewVisitor.visitDeclaration(it, Unit)
             }
 
+        val presenterVisitor = PresenterVisitor(logger, codeGenerator)
+        val mvpPresenter = resolver.getClassDeclarationByName(MvpPresenter::class.qualifiedName!!)!!
+            .asStarProjectedType()
         allClasses
             .filter { mvpPresenter.isAssignableFrom(it.asStarProjectedType()) && !it.isAbstract() }
             .toSet()
@@ -56,19 +55,11 @@ class MvpProcessor(environment: SymbolProcessorEnvironment) : SymbolProcessor {
                 it.getViewStateClass()?.let { viewName ->
                     val viewState = viewStates.find { it.simpleName == viewName }
                         ?: error("ViewState not found for ${it.qualifiedName?.getQualifier()}")
-                    val fileSpec = generateViewStateProvider(it, viewState, logger)
-                    filesToGenerate[fileSpec.packageName + fileSpec.name] = fileSpec
+                    presenterVisitor.visitDeclaration(it, viewState)
                 }
             }
+        invoked = true
         return emptyList()
-    }
-
-    override fun finish() {
-        filesToGenerate.values.forEach { fileSpec ->
-            runCatching {
-                fileSpec.writeTo(codeGenerator, Dependencies(false))
-            }
-        }
     }
 }
 
