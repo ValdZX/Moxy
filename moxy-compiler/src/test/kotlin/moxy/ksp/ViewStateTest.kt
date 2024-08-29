@@ -118,6 +118,7 @@ class ViewStateTest {
         }
         
         interface IntView : GenericView<Int>
+        interface IntViewExt : IntView
 
         interface SomeHandler {
             fun select(data: Int)
@@ -133,7 +134,10 @@ class ViewStateTest {
         }
         
         @InjectViewState
-        class ExtStringPresenter : StringPresenter<Short, IntView>()
+        open class ExtStringPresenter<T: IntView> : StringPresenter<Short, T>()
+        
+        @InjectViewState
+        class ExtExtStringPresenter : ExtStringPresenter<IntViewExt>()
         
         @InjectViewState
         class Ext2StringPresenter : StringPresenter<Short, GenericView<Short>>()

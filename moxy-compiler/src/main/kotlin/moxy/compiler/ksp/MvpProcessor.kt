@@ -7,12 +7,8 @@ import com.google.devtools.ksp.isAbstract
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
-import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSType
-import com.google.devtools.ksp.symbol.KSTypeArgument
-import com.google.devtools.ksp.symbol.KSTypeParameter
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
 import moxy.MvpPresenter
@@ -53,9 +49,13 @@ class MvpProcessor(environment: SymbolProcessorEnvironment) : SymbolProcessor {
             .toSet()
             .forEach {
                 it.getViewStateClass()?.let { viewName ->
-                    val viewState = viewStates.find { it.simpleName == viewName }
-                        ?: error("ViewState not found for ${it.qualifiedName?.getQualifier()}")
-                    presenterVisitor.visitDeclaration(it, viewState)
+                    logger.info("$viewName for ${it.qualifiedName?.getQualifier()}")
+                    val viewState = viewStates.find { state -> state.simpleName == viewName }
+                    if (viewState != null) {
+                        presenterVisitor.visitDeclaration(it, viewState)
+                    } else {
+                        logger.error("ViewState not found for ${it.qualifiedName?.getQualifier()}")
+                    }
                 }
             }
         invoked = true
@@ -63,39 +63,18 @@ class MvpProcessor(environment: SymbolProcessorEnvironment) : SymbolProcessor {
     }
 }
 
-private fun KSClassDeclaration.getViewStateClass(
-    superTypes: List<KSType> = getAllSuperTypes().toList(),
-    childrenPairs: Map<String, KSTypeArgument?> = emptyMap()
-): String? {
-    val superType = superTypes.find {
-        val declaration = it.declaration
-        declaration is KSClassDeclaration && declaration.classKind == ClassKind.CLASS
-    } ?: return null
-    val superTypeDeclaration = superType.declaration
-    if (superType.toClassName() == MvpPresenter::class.asClassName()) {
-        val firstArgument = superType.arguments.firstOrNull()
-        var resolve = firstArgument?.type?.resolve() ?: return null
-        if (resolve.declaration is KSTypeParameter) {
-            val parameterName = firstArgument.type.toString()
-            resolve = childrenPairs[parameterName]?.type?.resolve() ?: return null
-        }
-        if (resolve.declaration is KSTypeParameter) return null
-        val viewName = resolve.toClassName().simpleName
-        return "$viewName$VIEW_STATE_SUFFIX"
-    } else if (superTypeDeclaration is KSClassDeclaration) {
-        val pairs = superTypeDeclaration.typeParameters.zip(superType.arguments)
-            .associate { (param, arg) ->
-                val paramName = param.name.getShortName()
-                if (childrenPairs.contains(paramName)) {
-                    paramName to childrenPairs[paramName]
-                } else {
-                    paramName to arg
+private fun KSClassDeclaration.getViewStateClass(): String? {
+    getAllSuperTypes().toList().forEach { superType ->
+        superType.arguments.forEach { arg ->
+            val declaration = arg.type?.resolve()?.declaration
+            if (declaration is KSClassDeclaration) {
+                val superTypes = declaration.getAllSuperTypes()
+                if (superTypes.any { it.toClassName() == MvpView::class.asClassName() }) {
+                    val viewName = declaration.toClassName().simpleName
+                    return "$viewName$VIEW_STATE_SUFFIX"
                 }
             }
-        return superTypeDeclaration.getViewStateClass(
-            superTypes = (superTypes - superType),
-            childrenPairs = pairs
-        )
+        }
     }
     return null
 }
